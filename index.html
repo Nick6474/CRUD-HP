@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hogwarts - CRUD Completo AWS</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f4f4f9; color: #333; }
+        h1, h2 { color: #2c3e50; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        input, select, button { padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #27ae60; color: white; cursor: pointer; border: none; font-weight: bold; }
+        button:hover { background-color: #219150; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #34495e; color: white; }
+        .btn-delete { background-color: #e74c3c; padding: 5px 10px; border: none; color: white; border-radius: 3px; cursor: pointer; }
+        .btn-delete:hover { background-color: #c0392b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gestión de Estudiantes de Hogwarts (AWS RDS)</h1>
+
+    <h2>Añadir Nuevo Estudiante</h2>
+    <form id="form-estudiante">
+        <input type="text" id="nombre" placeholder="Nombre" required>
+        <input type="text" id="apellido" placeholder="Apellido" required>
+        <input type="number" id="edad" placeholder="Edad" required>
+        <input type="number" id="año_cursado" placeholder="Año Cursado (1-7)" required>
+        <select id="idCasa" required>
+            <option value="">Selecciona una Casa</option>
+            <option value="1">Gryffindor</option>
+            <option value="2">Slytherin</option>
+            <option value="3">Ravenclaw</option>
+            <option value="4">Hufflepuff</option>
+        </select>
+        <button type="submit">Guardar Estudiante</button>
+    </form>
+
+    <hr>
+
+    <h2>Lista de Estudiantes</h2>
+    <button id="btn-cargar" type="button" style="background-color: #2980b9; margin-bottom: 10px;">Cargar / Refrescar Datos</button>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Edad</th>
+                <th>Año</th>
+                <th>Casa</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-estudiantes">
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const API_URL = 'http://127.0.0.1:3000/api/estudiantes';
+
+    async function obtenerEstudiantes() {
+        try {
+            const res = await fetch(API_URL);
+            const data = await res.json();
+            const tbody = document.getElementById('tabla-estudiantes');
+            tbody.innerHTML = '';
+            
+            if (Array.isArray(data)) {
+                data.forEach(est => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${est.idEstudiante}</td>
+                        <td>${est.nombre}</td>
+                        <td>${est.apellido}</td>
+                        <td>${est.edad}</td>
+                        <td>${est.año_cursado}</td>
+                        <td>${est.casa || 'Sin asignación'}</td>
+                        <td>
+                            <button type="button" class="btn-delete" onclick="eliminarEstudiante(${est.idEstudiante})">Eliminar</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        } catch (err) {
+            console.error('Error al obtener estudiantes:', err);
+        }
+    }
+
+    document.getElementById('form-estudiante').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const estudiante = {
+            nombre: document.getElementById('nombre').value,
+            apellido: document.getElementById('apellido').value,
+            edad: document.getElementById('edad').value,
+            año_cursado: document.getElementById('año_cursado').value,
+            idCasa: document.getElementById('idCasa').value
+        };
+
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(estudiante)
+            });
+            
+            const result = await res.json();
+            if (res.ok) {
+                document.getElementById('form-estudiante').reset();
+                await obtenerEstudiantes();
+            } else {
+                alert('Error desde el servidor: ' + result.error);
+            }
+        } catch (err) {
+            console.error('Error al enviar formulario:', err);
+            alert('Error al conectar con el servidor.');
+        }
+    });
+
+    async function eliminarEstudiante(id) {
+        if (confirm('¿Deseas eliminar este estudiante?')) {
+            try {
+                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                await obtenerEstudiantes();
+            } catch (err) {
+                console.error('Error al eliminar:', err);
+            }
+        }
+    }
+
+    document.getElementById('btn-cargar').addEventListener('click', obtenerEstudiantes);
+    window.addEventListener('DOMContentLoaded', obtenerEstudiantes);
+</script>
+
+</body>
+</html>
